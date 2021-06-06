@@ -26,11 +26,19 @@
 
     Private Sub cmdPaste_Click(sender As Object, e As EventArgs) Handles cmdPaste.Click
         Dim s = Clipboard.GetText
+        Dim rowdata = s.Split(vbCrLf)
         Sudoku = New Sudoku
-        'Sudoku.Build(s)
-        Sudoku.BuildSamurai(s)
-        'Sudoku.Print()
-        Sudoku.PrintSamurai()
+        If rowdata.Count = 10 Then
+            Sudoku.Type = "Simple"
+            Sudoku.Build(s)
+            Sudoku.Print()
+        ElseIf rowdata.Count = 22 Then
+            Sudoku.Type = "Simple"
+            Sudoku.BuildSamurai(s)
+            Sudoku.PrintSamurai()
+        End If
+
+
     End Sub
 
     Private Sub cmdSolve_Click(sender As Object, e As EventArgs) Handles cmdSolve.Click
@@ -40,20 +48,18 @@
         Dim unsolved As Integer = Sudoku.Cells.Count
         Dim previous As Integer = unsolved
         Dim count = 0
-        Dim deep As Boolean = False
+        Dim deep As Boolean = True
         While unsolved > 0
             If Sudoku.Type = "Simple" Then
                 unsolved = Sudoku.Solve(deep)
-                'Sudoku.Print()
             Else
                 unsolved = Sudoku.Solve(deep)
-                'Sudoku.PrintSamurai()
             End If
             If unsolved = previous Then
-                'deep = True
+                deep = True
             End If
             previous = unsolved
-            Debug.Print("unsolved=" & unsolved.ToString)
+            'Debug.Print("unsolved=" & unsolved.ToString)
 
             count = count + 1
             If count > 20 Then
@@ -65,6 +71,17 @@
         sw.Stop()
         Debug.Print(sw.ElapsedMilliseconds & "ms")
 
-        Sudoku.PrintSamurai()
+        If Sudoku.Type = "Simple" Then
+            Sudoku.Print()
+        Else
+            Sudoku.PrintSamurai()
+        End If
+
+        'For i = 0 To 6
+        '    Debug.Print(Sudoku.method(i))
+        'Next
+        'Debug.Print(Sudoku.loops)
+        'Debug.Print(count)
+
     End Sub
 End Class
