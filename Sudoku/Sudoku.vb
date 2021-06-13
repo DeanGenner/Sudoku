@@ -6,7 +6,7 @@
     Public Type As String
 
     Public method(6) As Integer
-    Public loops As Integer
+    'Public loops As Integer
 
     Public Function Clusters() As List(Of Cluster)
         Dim l = New List(Of Cluster)
@@ -25,7 +25,7 @@
             If rid <= 9 Then
                 Dim celldata = rs.Split(vbTab)
                 Dim row = New Cluster
-                row.Id = rid.ToString("0")
+                row.Id = "R" & rid.ToString("00")
                 cid = 0
                 For Each cs In celldata
                     cid = cid + 1
@@ -45,7 +45,7 @@
         For i = 0 To 8
             cid = cid + 1
             Dim column = New Cluster
-            column.Id = cid.ToString("0")
+            column.Id = "C" & cid.ToString("00")
             For j = 0 To 8
                 Dim cell = Rows(j).Cells(i)
                 column.Cells.Add(cell)
@@ -58,6 +58,7 @@
         For i = 0 To 2
             For j = 0 To 2
                 Dim box = New Cluster
+                box.Id = "B" & (i * 3 + j).ToString("0")
                 For k = 0 To 2
                     For m = 0 To 2
                         Dim cell = Rows(i * 3 + k).Cells(j * 3 + m)
@@ -75,6 +76,7 @@
         Dim rowdata = Data.Split(vbCrLf)
         Dim rid As Integer = 0
         Dim cid As Integer = 0
+        Dim bid As Integer = 0
 
         For i = 1 To 5
             Dim ioff = 0
@@ -95,7 +97,7 @@
                 rid = rid + 1
                 Dim celldata = rs.Split(vbTab)
                 Dim row = New Cluster
-                row.Id = rid.ToString("0")
+                row.Id = "R" & rid.ToString("00")
                 cid = 0
 
                 For k = ioff To ioff + 8
@@ -121,7 +123,7 @@
             For j = ioff To ioff + 8
                 cid = cid + 1
                 Dim column = New Cluster
-                column.Id = cid.ToString("0")
+                column.Id = "C" & cid.ToString("00")
                 For k = joff To joff + 8
                     Dim id = (j + 1).ToString & "," & (k + 1).ToString
                     Dim cell = Cells(id)
@@ -134,18 +136,22 @@
             'build boxes
             For j = 0 To 2
                 For k = 0 To 2
-                    Dim box = New Cluster
-                    For m = 0 To 2
-                        For n = 0 To 2
-                            Dim ii = ioff + j * 3 + m
-                            Dim jj = joff + k * 3 + n
-                            Dim id = (ii + 1).ToString + "," + (jj + 1).ToString
-                            Dim cell = Cells(id)
-                            box.Cells.Add(cell)
-                            cell.Boxes.Add(box)
+                    If i <> 3 Or (j = 1 Or k = 1) Then
+                        bid = bid + 1
+                        Dim box = New Cluster
+                        box.Id = "B" & bid.ToString("00")
+                        For m = 0 To 2
+                            For n = 0 To 2
+                                Dim ii = ioff + j * 3 + m
+                                Dim jj = joff + k * 3 + n
+                                Dim id = (ii + 1).ToString + "," + (jj + 1).ToString
+                                Dim cell = Cells(id)
+                                box.Cells.Add(cell)
+                                cell.Boxes.Add(box)
+                            Next
                         Next
-                    Next
-                    Boxes.Add(box)
+                        Boxes.Add(box)
+                    End If
                 Next
             Next
         Next
@@ -154,55 +160,67 @@
 
     End Sub
 
-    Public Function Solve(Deep As Boolean) As Integer
-        ' build option list
-        For Each cell In Cells.Values
-            cell.Options = New List(Of String)
-            If cell.Value = " " Then
-                For i = 1 To 9
-                    Dim s = i.ToString("0")
-                    Dim found = False
-                    For Each cluster In cell.Clusters
-                        For Each c In cluster.Cells
-                            If s = c.Value Then
-                                found = True
-                                Exit For
-                            End If
+    Public Function Solve(First As Boolean) As Integer
+        Dim celllist = Cells.Values
+        ' build option list 
+        If First Then
+            For Each cell In celllist
+                cell.Options = New List(Of String)
+                If cell.Value = " " Then
+                    For i = 1 To 9
+                        Dim s = i.ToString("0")
+                        Dim found = False
+                        For Each cluster In cell.Clusters
+                            For Each c In cluster.Cells
+                                If s = c.Value Then
+                                    found = True
+                                    Exit For
+                                End If
+                            Next
                         Next
+                        If Not found Then
+                            cell.Options.Add(s)
+                        End If
                     Next
-                    If Not found Then
-                        cell.Options.Add(s)
-                    End If
-                Next
-            End If
+                Else
+                    cell.Options.Add(cell.Value)
+                End If
+            Next
+        End If
+
+        'select any single value
+        For Each cell In celllist
             If cell.Options.Count = 1 Then
-                cell.Deduced = cell.Options(0)
-                'method(0) = method(0) + 1
+                SetCell(cell)
+                method(0) = method(0) + 1
             End If
         Next
 
-        For Each cell In Cells.Values
+        '' if option only once in cluster, then select
+        For Each cluster In Clusters()
             For i = 1 To 9
                 Dim ii = i.ToString("0")
-                For Each cluster In cell.Clusters
-                    Dim c = 0
-                    Dim cc As New Cell
-                    For Each cell2 In cluster.Cells
-                        If cell2.Options.Contains(ii) Then
-                            cc = cell2
-                            c = c + 1
-                        End If
-                    Next
-                    If c = 1 Then
-                        cc.Deduced = ii
-                        '       method(1) = method(1) + 1
+                Dim c = 0
+                Dim cc As New Cell
+                For Each cell In cluster.Cells
+                    If cell.Options.Contains(ii) Then
+                        cc = cell
+                        c = c + 1
                     End If
                 Next
+                If c = 1 Then
+                    If cc.Value = " " Then
+                        cc.Options.Clear()
+                        cc.Options.Add(ii)
+                        SetCell(cc)
+                        method(1) = method(1) + 1
+                    End If
+                End If
             Next
         Next
 
-        'check clusters for identical pairs
-        If Deep Then
+        'check clusters for identical pairs... needed for "hard"
+        If True Then
             For Each cluster In Clusters()
                 For Each c1 In cluster.Cells
                     If c1.Options.Count = 2 Then
@@ -222,8 +240,8 @@
                                                         c3.Options.Remove(s2)
                                                     End If
                                                     If c3.Options.Count = 1 Then
-                                                        c3.Deduced = c3.Options(0)
-                                                        '    method(4) = method(4) + 1
+                                                        SetCell(c3)
+                                                        method(2) = method(2) + 1
                                                     End If
                                                 End If
                                             End If
@@ -238,13 +256,34 @@
         End If
 
         Dim unsolved As Integer
-        For Each cell In Cells.Values
+        For Each cell In celllist
             If cell.Value = " " Then
                 unsolved = unsolved + 1
             End If
         Next
         Return unsolved
     End Function
+
+    Private Sub SetCell(Cell As Cell)
+        'if one option, set, adjust options in clusters and recursively set cells with one option
+        If Cell.Options.Count = 1 Then
+            If Cell.Value = " " Then
+                Cell.Deduced = Cell.Options(0)
+                For Each cluster In Cell.Clusters
+                    For Each c2 In cluster.Cells
+                        If Cell IsNot c2 Then
+                            If c2.Options.Contains(Cell.Options(0)) Then
+                                c2.Options.Remove(Cell.Options(0))
+                                If c2.Options.Count = 1 Then
+                                    SetCell(c2)
+                                End If
+                            End If
+                        End If
+                    Next
+                Next
+            End If
+        End If
+    End Sub
 
     Public Sub Print()
         For Each row In Rows
@@ -333,6 +372,7 @@ End Class
 Public Class Cluster
     Public Id As String
     Public Cells As New List(Of Cell)
+    Public Type As String
 
     Public Overrides Function ToString() As String
         Dim s As String = ""
