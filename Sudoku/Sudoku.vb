@@ -26,12 +26,13 @@
                 Dim celldata = rs.Split(vbTab)
                 Dim row = New Cluster
                 row.Id = "R" & rid.ToString("00")
+                row.Type = "row"
                 cid = 0
                 For Each cs In celldata
                     cid = cid + 1
                     Dim cell = New Cell
                     cell.Fixed = Mid(cs & " ", 1, 1)
-                    cell.Id = row.Id & "," & cid.ToString("0")
+                    cell.Id = cid.ToString("0") & "," & rid.ToString("0")
                     Cells.Add(cell.Id, cell)
                     row.Cells.Add(cell)
                     cell.Rows.Add(row)
@@ -46,6 +47,7 @@
             cid = cid + 1
             Dim column = New Cluster
             column.Id = "C" & cid.ToString("00")
+            column.Type = "column"
             For j = 0 To 8
                 Dim cell = Rows(j).Cells(i)
                 column.Cells.Add(cell)
@@ -58,6 +60,7 @@
         For i = 0 To 2
             For j = 0 To 2
                 Dim box = New Cluster
+                box.Type = "box"
                 box.Id = "B" & (i * 3 + j).ToString("0")
                 For k = 0 To 2
                     For m = 0 To 2
@@ -191,8 +194,10 @@
         'select any single value
         For Each cell In celllist
             If cell.Options.Count = 1 Then
-                SetCell(cell)
-                method(0) = method(0) + 1
+                If cell.Value = " " Then
+                    SetCell(cell)
+                    method(0) = method(0) + 1
+                End If
             End If
         Next
 
@@ -240,8 +245,10 @@
                                                         c3.Options.Remove(s2)
                                                     End If
                                                     If c3.Options.Count = 1 Then
-                                                        SetCell(c3)
-                                                        method(2) = method(2) + 1
+                                                        If c3.Value = " " Then
+                                                            SetCell(c3)
+                                                            method(2) = method(2) + 1
+                                                        End If
                                                     End If
                                                 End If
                                             End If
@@ -255,12 +262,157 @@
             Next
         End If
 
+
+
         Dim unsolved As Integer
         For Each cell In celllist
             If cell.Value = " " Then
                 unsolved = unsolved + 1
             End If
         Next
+        Return unsolved
+    End Function
+
+    Public Function SuperSolve() As Integer
+        'check for digit in multiple cells in a row or column, in a single box, but not elsewhere in box.
+        'remove digit from elswhere in box since must be in row or column
+
+        Dim celllist = Cells.Values
+        If True Then
+            For Each c In Clusters()
+                If c.Type <> "box" Then
+                    'get 3 boxes
+                    Dim boxlist As New List(Of Cluster)
+                    For Each cell In c.Cells
+                        If Not boxlist.Contains(cell.Box) Then
+                            boxlist.Add(cell.Box)
+                        End If
+                    Next
+                    For Each box In boxlist
+                        For i = 1 To 9
+                            Dim ii = i.ToString("0")
+                            Dim incluster = 0
+                            Dim outcluster = 0
+                            For Each cell In c.Cells
+                                If cell.Options.Contains(ii) Then
+                                    If cell.Box Is box Then
+                                        incluster = incluster + 1
+                                    Else
+                                        outcluster = outcluster + 1
+                                    End If
+                                End If
+                            Next
+                            If incluster > 1 And outcluster = 0 Then
+                                Dim includelist As New List(Of Cell)
+                                For Each cell In c.Cells
+                                    If cell.Box Is box Then
+                                        includelist.Add(cell)
+                                    End If
+                                Next
+
+                                For Each cell In box.Cells
+                                    If Not includelist.Contains(cell) Then
+                                        If cell.Options.Contains(ii) Then
+                                            cell.Options.Remove(ii)
+                                            If cell.Options.Count = 1 Then
+                                                If cell.Value = " " Then
+                                                    SetCell(cell)
+                                                    method(3) = method(3) + 1
+                                                End If
+                                            End If
+                                        End If
+                                    End If
+                                Next
+                            End If
+                        Next
+                    Next
+                End If
+            Next
+        End If
+
+        If True Then
+            For Each cl In Clusters()
+                For i = 1 To 8
+                    Dim ii = i.ToString("0")
+                    For j = i + 1 To 9
+                        Dim jj = j.ToString("0")
+                        Dim countwithboth = 0
+                        Dim countwitheither = 0
+                        For Each cell In cl.Cells
+                            If cell.Options.Contains(ii) And cell.Options.Contains(jj) Then
+                                countwithboth = countwithboth + 1
+                            ElseIf cell.Options.Contains(ii) Or cell.Options.Contains(jj) Then
+                                countwitheither = countwitheither + 1
+                            End If
+                        Next
+                        If countwithboth = 2 And countwitheither = 0 Then
+                            For Each cell In cl.Cells
+                                If cell.Value = " " Then
+                                    If cell.Options.Contains(ii) And cell.Options.Contains(jj) Then
+                                        If cell.Options.Count > 2 Then
+                                            cell.Options = New List(Of String)
+                                            cell.Options.Add(ii)
+                                            cell.Options.Add(jj)
+                                        End If
+                                    Else
+                                        If cell.Options.Contains(ii) Then
+                                            cell.Options.Remove(ii)
+                                        End If
+                                        If cell.Options.Contains(jj) Then
+                                            cell.Options.Remove(jj)
+                                        End If
+                                        If cell.Options.Count = 1 Then
+                                            If cell.Value = " " Then
+                                                SetCell(cell)
+                                                method(3) = method(3) + 1
+                                            End If
+                                        End If
+                                    End If
+                                End If
+                            Next
+                        End If
+                    Next
+                Next
+            Next
+        End If
+
+
+
+        Dim unsolved As Integer
+        For Each cell In celllist
+            If cell.Value = " " Then
+                unsolved = unsolved + 1
+            End If
+        Next
+        Return unsolved
+    End Function
+
+    Public Function Brute() As Integer
+        'brute force tries
+        Dim celllist = Cells.Values
+        'find a pair
+        Dim test As New Cell
+        For Each cell In celllist
+            If cell.Value = " " Then
+                If cell.Options.Count = 2 Then
+                    test = cell
+                    Exit For
+                End If
+            End If
+        Next
+
+        Save()
+        test.Options.RemoveAt(1)
+        SetCell(test)
+        Dim unsolved = Solve(False)
+
+        If unsolved > 0 Then
+            Read()
+            test.Options.RemoveAt(0)
+            SetCell(test)
+            unsolved = Solve(False)
+        End If
+
         Return unsolved
     End Function
 
@@ -272,10 +424,11 @@
                 For Each cluster In Cell.Clusters
                     For Each c2 In cluster.Cells
                         If Cell IsNot c2 Then
-                            If c2.Options.Contains(Cell.Options(0)) Then
-                                c2.Options.Remove(Cell.Options(0))
+                            If c2.Options.Contains(Cell.Deduced) Then
+                                c2.Options.Remove(Cell.Deduced)
                                 If c2.Options.Count = 1 Then
                                     SetCell(c2)
+                                    method(0) = method(0) + 1
                                 End If
                             End If
                         End If
@@ -329,6 +482,24 @@
 
         Debug.Print("")
     End Sub
+
+    Public Sub Save()
+        For Each cell In Cells.Values
+            cell.Save()
+        Next
+    End Sub
+
+    Public Sub Read()
+        For Each cell In Cells.Values
+            cell.Read()
+        Next
+    End Sub
+
+End Class
+
+Public Class Cache
+    Public Deduced As String
+    Public OptionList As String
 End Class
 
 Public Class Cell
@@ -341,6 +512,8 @@ Public Class Cell
     Public Columns As New List(Of Cluster)
     Public Boxes As New List(Of Cluster)
 
+    Private cache As Cache
+
     Public Function Clusters() As List(Of Cluster)
         Dim l = New List(Of Cluster)
         l.AddRange(Rows)
@@ -348,7 +521,6 @@ Public Class Cell
         l.AddRange(Boxes)
         Return l
     End Function
-
 
     Public Function Value() As String
         If Fixed <> " " Then
@@ -367,6 +539,29 @@ Public Class Cell
         Next
         Return s
     End Function
+
+    Public Function Box() As Cluster
+        For Each c In Clusters()
+            If c.Type = "box" Then
+                Return c
+            End If
+        Next
+        Return Nothing
+    End Function
+
+    Public Sub Save()
+        cache = New Cache
+        cache.Deduced = Deduced
+        cache.OptionList = OptionList()
+    End Sub
+
+    Public Sub Read()
+        Deduced = cache.Deduced
+        Options = New List(Of String)
+        For Each c In cache.OptionList.ToCharArray
+            Options.Add(c)
+        Next
+    End Sub
 End Class
 
 Public Class Cluster
