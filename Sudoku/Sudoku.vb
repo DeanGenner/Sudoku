@@ -119,6 +119,7 @@
                     row.Cells.Add(cell)
                     cell.Rows.Add(row)
                 Next
+                row.Type = "row"
                 Rows.Add(row)
             Next
 
@@ -133,6 +134,7 @@
                     column.Cells.Add(cell)
                     cell.Columns.Add(column)
                 Next
+                column.Type = "column"
                 Columns.Add(column)
             Next
 
@@ -153,6 +155,7 @@
                                 cell.Boxes.Add(box)
                             Next
                         Next
+                        box.Type = "box"
                         Boxes.Add(box)
                     End If
                 Next
@@ -160,7 +163,6 @@
         Next
 
         Type = "Samurai"
-
     End Sub
 
     Public Function Solve(First As Boolean) As Integer
@@ -392,26 +394,33 @@
         Dim celllist = Cells.Values
         'find a pair
         Dim test As New Cell
+        Dim unsolved = Solve(False)
         For Each cell In celllist
             If cell.Value = " " Then
                 If cell.Options.Count = 2 Then
                     test = cell
-                    Exit For
+
+
+
+                    Save()
+                    test.Options.RemoveAt(0)
+                    SetCell(test)
+                    Unsolved = Solve(False)
+
+                    If unsolved > 0 Then
+                        Read()
+                        test.Options.RemoveAt(1)
+                        SetCell(test)
+                        unsolved = Solve(False)
+                        If unsolved > 0 Then
+                            Read()
+                        End If
+                    End If
+                    If unsolved = 0 Then Exit For
                 End If
             End If
         Next
 
-        Save()
-        test.Options.RemoveAt(1)
-        SetCell(test)
-        Dim unsolved = Solve(False)
-
-        If unsolved > 0 Then
-            Read()
-            test.Options.RemoveAt(0)
-            SetCell(test)
-            unsolved = Solve(False)
-        End If
 
         Return unsolved
     End Function

@@ -18,7 +18,7 @@
             Sudoku.Build(s)
             Sudoku.Print()
         ElseIf rowdata.Count = 22 Then
-            Sudoku.Type = "Simple"
+            Sudoku.Type = "Samurai"
             Sudoku.BuildSamurai(s)
             Sudoku.PrintSamurai()
         End If
@@ -37,7 +37,7 @@
         Dim first As Boolean = True
         While unsolved > 0
             unsolved = Sudoku.Solve(first)
-            If unsolved > 0 Then
+            If unsolved > 0 And count > 0 Then
                 unsolved = Sudoku.SuperSolve()
             End If
             first = False
