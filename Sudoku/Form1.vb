@@ -16,14 +16,11 @@
         If rowdata.Count = 10 Then
             Sudoku.Type = "Simple"
             Sudoku.Build(s)
-            Sudoku.Print()
         ElseIf rowdata.Count = 22 Then
             Sudoku.Type = "Samurai"
             Sudoku.BuildSamurai(s)
-            Sudoku.PrintSamurai()
         End If
-
-
+        Sudoku.Print()
     End Sub
 
     Private Sub cmdSolve_Click(sender As Object, e As EventArgs) Handles cmdSolve.Click
@@ -37,8 +34,11 @@
         Dim first As Boolean = True
         While unsolved > 0
             unsolved = Sudoku.Solve(first)
-            If unsolved > 0 And count > 0 Then
-                unsolved = Sudoku.SuperSolve()
+            If unsolved = previous And count > 0 Then
+                unsolved = Sudoku.SuperSolve1()
+            End If
+            If unsolved = previous And count > 0 Then
+                unsolved = Sudoku.SuperSolve2()
             End If
             first = False
             If unsolved = previous Then
@@ -56,19 +56,19 @@
         sw.Stop()
 
         Debug.Print(sw.ElapsedMilliseconds & "ms")
+        Debug.Print(IIf(Sudoku.OK, "Checked OK", "Error!!!"))
 
-        If Sudoku.Type = "Simple" Then
-            Sudoku.Print()
-        Else
-            Sudoku.PrintSamurai()
-        End If
+        Sudoku.Print()
 
-        For i = 0 To 4
-            Debug.Print(Sudoku.method(i))
-        Next
-        If bruteused Then
-            Debug.Print("brute")
-        End If
-        Debug.Print("Solve Count = " & count.ToString)
+        Debug.Print("Single option = " & Sudoku.method(0).ToString)
+        Debug.Print("Once in custer = " & Sudoku.method(1).ToString)
+        Debug.Print("Simple Pair Elimination = " & Sudoku.method(2).ToString)
+        Debug.Print("Deduced Pair Elimination = " & Sudoku.method(3).ToString)
+        Debug.Print("??? = " & Sudoku.method(4).ToString)
+
+
+        Debug.Print("Loop Count = " & count.ToString)
+
+        Sudoku.PrintStopwatches()
     End Sub
 End Class

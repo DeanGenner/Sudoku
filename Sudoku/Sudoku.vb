@@ -6,7 +6,13 @@
     Public Type As String
 
     Public method(6) As Integer
-    'Public loops As Integer
+
+    Public swBuildOptions As New Stopwatch
+    Public swSingleOption As New Stopwatch
+    Public swSingleOccurence As New Stopwatch
+    Public swSimplePairs As New Stopwatch
+    Public swSuperSolve1 As New Stopwatch
+    Public swSuperSolve2 As New Stopwatch
 
     Public Function Clusters() As List(Of Cluster)
         Dim l = New List(Of Cluster)
@@ -167,34 +173,78 @@
 
     Public Function Solve(First As Boolean) As Integer
         Dim celllist = Cells.Values
-        ' build option list 
+
         If First Then
-            For Each cell In celllist
-                cell.Options = New List(Of String)
-                If cell.Value = " " Then
-                    For i = 1 To 9
-                        Dim s = i.ToString("0")
-                        Dim found = False
-                        For Each cluster In cell.Clusters
-                            For Each c In cluster.Cells
-                                If s = c.Value Then
-                                    found = True
-                                    Exit For
-                                End If
-                            Next
-                        Next
-                        If Not found Then
-                            cell.Options.Add(s)
-                        End If
-                    Next
-                Else
-                    cell.Options.Add(cell.Value)
-                End If
-            Next
+            swBuildOptions.Start()
+            BuildOptions()
+            swBuildOptions.Stop()
         End If
 
-        'select any single value
+        swSingleOption.Start()
+        SetSingleOptions()
+        swSingleOption.Stop()
+
+        If Not First Then
+            swSingleOccurence.Start()
+            SetSingleOccurrence()
+            swSingleOccurence.Stop()
+        End If
+
+        If Not First Then
+            swSimplePairs.Start()
+            SinglePairs()
+            swSimplePairs.Stop()
+        End If
+
+        Dim unsolved As Integer
         For Each cell In celllist
+            If cell.Value = " " Then
+                unsolved = unsolved + 1
+            End If
+        Next
+        Return unsolved
+    End Function
+
+    Public Sub PrintStopwatches()
+        Debug.Print("BuildOptions =" & swBuildOptions.ElapsedMilliseconds.ToString)
+        Debug.Print("SingleOption =" & swSingleOption.ElapsedMilliseconds.ToString)
+        Debug.Print("SingleOccurance=" & swSingleOccurence.ElapsedMilliseconds.ToString)
+        Debug.Print("SimplePairs=" & swSimplePairs.ElapsedMilliseconds.ToString)
+        Debug.Print("Supersolve1=" & swSuperSolve1.ElapsedMilliseconds.ToString)
+        Debug.Print("Supersolve2=" & swSuperSolve2.ElapsedMilliseconds.ToString)
+
+    End Sub
+
+
+    Public Sub BuildOptions()
+        For Each cell In Cells.Values
+            cell.Options = New List(Of Char)
+            If cell.Value = " " Then
+                For i = 1 To 9
+                    Dim s As Char = i.ToString("0")
+                    Dim found = False
+                    For Each cluster In cell.Clusters
+                        For Each c In cluster.Cells
+                            If s = c.Value Then
+                                found = True
+                                Exit For
+                            End If
+                        Next
+                        If found Then Exit For
+                    Next
+                    If Not found Then
+                        cell.Options.Add(s)
+                    End If
+                Next
+            Else
+                cell.Options.Add(cell.Value)
+            End If
+        Next
+
+    End Sub
+
+    Public Sub SetSingleOptions()
+        For Each cell In Cells.Values
             If cell.Options.Count = 1 Then
                 If cell.Value = " " Then
                     SetCell(cell)
@@ -203,7 +253,9 @@
             End If
         Next
 
-        '' if option only once in cluster, then select
+    End Sub
+
+    Public Sub SetSingleOccurrence()
         For Each cluster In Clusters()
             For i = 1 To 9
                 Dim ii = i.ToString("0")
@@ -225,45 +277,151 @@
                 End If
             Next
         Next
+    End Sub
 
-        'check clusters for identical pairs... needed for "hard"
-        If True Then
-            For Each cluster In Clusters()
-                For Each c1 In cluster.Cells
-                    If c1.Options.Count = 2 Then
-                        For Each c2 In cluster.Cells
-                            If c1.Id <> c2.Id Then
-                                If c2.Options.Count = 2 Then
-                                    If c1.OptionList = c2.OptionList Then
-                                        Dim s1 = c1.Options(0)
-                                        Dim s2 = c1.Options(1)
-                                        For Each c3 In cluster.Cells
-                                            If c3.Value = " " Then
-                                                If c3.Id <> c1.Id And c3.Id <> c2.Id Then
-                                                    If c3.Options.Contains(s1) Then
-                                                        c3.Options.Remove(s1)
-                                                    End If
-                                                    If c3.Options.Contains(s2) Then
-                                                        c3.Options.Remove(s2)
-                                                    End If
-                                                    If c3.Options.Count = 1 Then
-                                                        If c3.Value = " " Then
-                                                            SetCell(c3)
-                                                            method(2) = method(2) + 1
-                                                        End If
+    Public Sub SinglePairs()
+        For Each cluster In Clusters()
+            For Each c1 In cluster.Cells
+                If c1.Options.Count = 2 Then
+                    For Each c2 In cluster.Cells
+                        If c1.Id <> c2.Id Then
+                            If c2.Options.Count = 2 Then
+                                If c1.OptionList = c2.OptionList Then
+                                    Dim s1 = c1.Options(0)
+                                    Dim s2 = c1.Options(1)
+                                    For Each c3 In cluster.Cells
+                                        If c3.Value = " " Then
+                                            If c3.Id <> c1.Id And c3.Id <> c2.Id Then
+                                                If c3.Options.Contains(s1) Then
+                                                    c3.Options.Remove(s1)
+                                                End If
+                                                If c3.Options.Contains(s2) Then
+                                                    c3.Options.Remove(s2)
+                                                End If
+                                                If c3.Options.Count = 1 Then
+                                                    If c3.Value = " " Then
+                                                        SetCell(c3)
+                                                        method(2) = method(2) + 1
                                                     End If
                                                 End If
                                             End If
-                                        Next
-                                    End If
+                                        End If
+                                    Next
                                 End If
                             End If
+                        End If
+                    Next
+                End If
+            Next
+        Next
+    End Sub
+
+    Public Function SuperSolve1() As Integer
+        'check for digit in multiple cells in a row or column, in a single box, but not elsewhere in box.
+        'remove digit from elsewhere in box since must be in row or column
+
+        swSuperSolve1.Start()
+
+        Dim celllist = Cells.Values
+        If True Then
+            For Each c In Clusters()
+                If c.Type <> "box" Then
+                    'get 3 boxes
+                    Dim boxlist As New List(Of Cluster)
+                    For Each cell In c.Cells
+                        If Not boxlist.Contains(cell.Box) Then
+                            boxlist.Add(cell.Box)
+                        End If
+                    Next
+                    For Each box In boxlist
+                        For i = 1 To 9
+                            Dim ii = i.ToString("0")
+                            Dim incluster = 0
+                            Dim outcluster = 0
+                            For Each cell In c.Cells
+                                If cell.Options.Contains(ii) Then
+                                    If cell.Box Is box Then
+                                        incluster = incluster + 1
+                                    Else
+                                        outcluster = outcluster + 1
+                                    End If
+                                End If
+                            Next
+                            If incluster > 1 And outcluster = 0 Then
+                                Dim includelist As New List(Of Cell)
+                                For Each cell In c.Cells
+                                    If cell.Box Is box Then
+                                        includelist.Add(cell)
+                                    End If
+                                Next
+
+                                For Each cell In box.Cells
+                                    If Not includelist.Contains(cell) Then
+                                        If cell.Options.Contains(ii) Then
+                                            cell.Options.Remove(ii)
+                                            If cell.Options.Count = 1 Then
+                                                If cell.Value = " " Then
+                                                    SetCell(cell)
+                                                    method(3) = method(3) + 1
+                                                End If
+                                            End If
+                                        End If
+                                    End If
+                                Next
+                            End If
                         Next
-                    End If
+                    Next
+                End If
+            Next
+        End If
+
+        If False Then
+            For Each cl In Clusters()
+                For i = 1 To 8
+                    Dim ii = i.ToString("0")
+                    For j = i + 1 To 9
+                        Dim jj = j.ToString("0")
+                        Dim countwithboth = 0
+                        Dim countwitheither = 0
+                        For Each cell In cl.Cells
+                            If cell.Options.Contains(ii) And cell.Options.Contains(jj) Then
+                                countwithboth = countwithboth + 1
+                            ElseIf cell.Options.Contains(ii) Or cell.Options.Contains(jj) Then
+                                countwitheither = countwitheither + 1
+                            End If
+                        Next
+                        If countwithboth = 2 And countwitheither = 0 Then
+                            For Each cell In cl.Cells
+                                If cell.Value = " " Then
+                                    If cell.Options.Contains(ii) And cell.Options.Contains(jj) Then
+                                        If cell.Options.Count > 2 Then
+                                            cell.Options = New List(Of Char)
+                                            cell.Options.Add(ii)
+                                            cell.Options.Add(jj)
+                                        End If
+                                    Else
+                                        If cell.Options.Contains(ii) Then
+                                            cell.Options.Remove(ii)
+                                        End If
+                                        If cell.Options.Contains(jj) Then
+                                            cell.Options.Remove(jj)
+                                        End If
+                                        If cell.Options.Count = 1 Then
+                                            If cell.Value = " " Then
+                                                SetCell(cell)
+                                                method(4) = method(4) + 1
+                                            End If
+                                        End If
+                                    End If
+                                End If
+                            Next
+                        End If
+                    Next
                 Next
             Next
         End If
 
+        swSuperSolve1.Stop()
 
 
         Dim unsolved As Integer
@@ -275,12 +433,14 @@
         Return unsolved
     End Function
 
-    Public Function SuperSolve() As Integer
+    Public Function SuperSolve2() As Integer
         'check for digit in multiple cells in a row or column, in a single box, but not elsewhere in box.
-        'remove digit from elswhere in box since must be in row or column
+        'remove digit from elsewhere in box since must be in row or column
+
+        swSuperSolve2.Start()
 
         Dim celllist = Cells.Values
-        If True Then
+        If False Then
             For Each c In Clusters()
                 If c.Type <> "box" Then
                     'get 3 boxes
@@ -352,7 +512,7 @@
                                 If cell.Value = " " Then
                                     If cell.Options.Contains(ii) And cell.Options.Contains(jj) Then
                                         If cell.Options.Count > 2 Then
-                                            cell.Options = New List(Of String)
+                                            cell.Options = New List(Of Char)
                                             cell.Options.Add(ii)
                                             cell.Options.Add(jj)
                                         End If
@@ -366,7 +526,7 @@
                                         If cell.Options.Count = 1 Then
                                             If cell.Value = " " Then
                                                 SetCell(cell)
-                                                method(3) = method(3) + 1
+                                                method(4) = method(4) + 1
                                             End If
                                         End If
                                     End If
@@ -378,6 +538,7 @@
             Next
         End If
 
+        swSuperSolve2.Stop()
 
 
         Dim unsolved As Integer
@@ -389,9 +550,14 @@
         Return unsolved
     End Function
 
+
     Public Function Brute() As Integer
+
+        'Print()
+
         'brute force tries
         Dim celllist = Cells.Values
+        Dim count = 0
         'find a pair
         Dim test As New Cell
         Dim unsolved = Solve(False)
@@ -399,19 +565,19 @@
             If cell.Value = " " Then
                 If cell.Options.Count = 2 Then
                     test = cell
-
-
-
+                    count = count + 1
                     Save()
                     test.Options.RemoveAt(0)
                     SetCell(test)
-                    Unsolved = Solve(False)
+                    unsolved = Solve(False)
+                    'unsolved = SuperSolve()
 
                     If unsolved > 0 Then
                         Read()
                         test.Options.RemoveAt(1)
                         SetCell(test)
                         unsolved = Solve(False)
+                        'unsolved = SuperSolve()
                         If unsolved > 0 Then
                             Read()
                         End If
@@ -421,8 +587,18 @@
             End If
         Next
 
-
+        Debug.Print("brute " & count.ToString)
         Return unsolved
+    End Function
+
+    Public Function OK() As Boolean
+        Dim isok = True
+        For Each c In Clusters()
+            If Not c.OK Then
+                isok = False
+            End If
+        Next
+        Return isok
     End Function
 
     Private Sub SetCell(Cell As Cell)
@@ -448,6 +624,16 @@
     End Sub
 
     Public Sub Print()
+        If Type = "Simple" Then
+            PrintSimple()
+        ElseIf Type = "Samurai" Then
+            PrintSamurai()
+        Else
+            Debug.Print("Not valid paste data")
+        End If
+    End Sub
+
+    Public Sub PrintSimple()
         For Each row In Rows
             Debug.Print(row.ToString)
         Next
@@ -512,29 +698,32 @@ Public Class Cache
 End Class
 
 Public Class Cell
-    Public Fixed As String
-    Public Deduced As String = ""
-    Public Options As New List(Of String)
+    Public Fixed As Char
+    Public Deduced As Char = " "
+    Public Options As New List(Of Char)
     Public Id As String
 
     Public Rows As New List(Of Cluster)
     Public Columns As New List(Of Cluster)
     Public Boxes As New List(Of Cluster)
 
+    Private mClusters As List(Of Cluster)
     Private cache As Cache
 
     Public Function Clusters() As List(Of Cluster)
-        Dim l = New List(Of Cluster)
-        l.AddRange(Rows)
-        l.AddRange(Columns)
-        l.AddRange(Boxes)
-        Return l
+        If mClusters Is Nothing Then
+            mClusters = New List(Of Cluster)
+            mClusters.AddRange(Rows)
+            mClusters.AddRange(Columns)
+            mClusters.AddRange(Boxes)
+        End If
+        Return mClusters
     End Function
 
-    Public Function Value() As String
+    Public Function Value() As Char
         If Fixed <> " " Then
             Return Fixed
-        ElseIf Deduced <> "" Then
+        ElseIf Deduced <> " " Then
             Return Deduced
         Else
             Return " "
@@ -566,7 +755,7 @@ Public Class Cell
 
     Public Sub Read()
         Deduced = cache.Deduced
-        Options = New List(Of String)
+        Options = New List(Of Char)
         For Each c In cache.OptionList.ToCharArray
             Options.Add(c)
         Next
@@ -595,6 +784,22 @@ Public Class Cluster
             s = s & v
         Next
         Return s
+    End Function
+
+    Public Function OK() As Boolean
+        Dim isok As Boolean = True
+        For i = 1 To 9
+            Dim found = False
+            For Each cell In Cells
+                If cell.Value = i.ToString Then
+                    found = True
+                End If
+            Next
+            If Not found Then
+                isok = False
+            End If
+        Next
+        Return isok
     End Function
 End Class
 
